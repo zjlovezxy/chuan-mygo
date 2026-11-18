@@ -84,13 +84,14 @@ type Config struct {
 type Session struct {
 	cfg Config
 
-	mu     sync.Mutex
-	state  State
-	ws     *netlink.WS
-	pr     *peer.Peer
-	closer context.CancelFunc
-	done   chan struct{}
-	closed bool
+	mu       sync.Mutex
+	state    State
+	ws       *netlink.WS
+	pr       *peer.Peer
+	closer   context.CancelFunc
+	done     chan struct{}
+	closed   bool
+	finished bool
 }
 
 // New prepares a session. Call Start to join the room.
@@ -108,6 +109,28 @@ func (s *Session) State() State {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.state
+}
+
+// finish closes the session once: later disconnect notices are ignored, so a
+// peer leaving twice (explicit signal plus the server's own notice) logs once.
+func (s *Session) finish(detail string) {
+	s.mu.Lock()
+	if s.finished {
+		s.mu.Unlock()
+		return
+	}
+	s.finished = true
+	s.mu.Unlock()
+	s.cfg.Events.log("%s", detail)
+	s.setState(StateClosed, detail)
+}
+
+// closing reports whether the session is being torn down on purpose, so the
+// resulting socket errors stay quiet.
+func (s *Session) closing() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.closed || s.finished
 }
 
 func (s *Session) setState(state State, detail string) {
@@ -163,13 +186,13 @@ func (s *Session) Start(parent context.Context) error {
 func (s *Session) readLoop(ctx context.Context, ws *netlink.WS) {
 	defer func() {
 		close(s.done)
-		s.setState(StateClosed, "连接已结束")
+		s.finish("连接已结束")
 	}()
 
 	for {
 		frame, err := ws.Recv()
 		if err != nil {
-			if ctx.Err() == nil {
+			if ctx.Err() == nil && !s.closing() {
 				s.cfg.Events.fail(fmt.Errorf("信令连接中断：%w", err))
 			}
 			return
@@ -265,12 +288,10 @@ func (s *Session) handleSignal(ctx context.Context, ws *netlink.WS, msg protocol
 		}
 
 	case protocol.SignalDisconnect:
-		s.cfg.Events.log("对方主动断开了连接")
-		s.cfg.Events.state(StateClosed, "对方主动断开了连接")
+		s.finish("对方主动断开了连接")
 
 	case protocol.SignalPeerLeft:
-		s.cfg.Events.log("对方已离开房间")
-		s.cfg.Events.state(StateClosed, "对方已离开房间")
+		s.finish("对方已离开房间")
 
 	case protocol.SignalError:
 		reason := msg.Message
@@ -421,6 +442,8 @@ func (s *Session) Close() error {
 	ws, p, cancel := s.ws, s.pr, s.closer
 	s.mu.Unlock()
 
+	s.finish("已断开连接")
+
 	if ws != nil {
 		sig, _ := protocol.NewSignal(protocol.SignalDisconnect, map[string]string{"reason": "用户主动断开"})
 		_ = ws.SendJSON(sig)
@@ -432,6 +455,5 @@ func (s *Session) Close() error {
 	if cancel != nil {
 		cancel()
 	}
-	s.setState(StateClosed, "已断开连接")
 	return nil
 }
