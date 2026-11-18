@@ -21,7 +21,7 @@ mygo 的原生 UI 不依赖 cgo，同一份 `ui` 代码既能编成桌面窗口�
 
 1. 桌面版：打开应用 → 选择「发送文件」→ 生成取件码 → 把码发给对方。
 2. Android / 浏览器：选择「接收文件」→ 输入取件码 → 连接后文件自动接收。
-3. 接收位置：桌面版默认 `~/Downloads`（可在设置里改），Android 版在应用私有下载目录（文件管理器可访问），浏览器版交给浏览器下载。
+3. 接收位置：桌面版默认 `~/Downloads`（可在设置里改）；Android 版存在应用私有目录（`Android/data/dev.chuan.app/files/Download`，保存后会调 MediaScanner 登记），浏览器版交给浏览器下载。
 
 ### 连哪台服务器
 
@@ -70,8 +70,30 @@ cd android && gradle assembleDebug
 
 ```bash
 mygo dev                              # 原生窗口
-mygo dev -web                         # 浏览器里调试同一套 UI
+mygo dev -web                         # 浏览器里调试同一套 UI（没有文件选择桥，选文件会提示）
 ```
+
+页面离屏渲染（不需要显示器也能检查布局，有 DISPLAY 时会顺带产出 PNG）：
+
+```bash
+DISPLAY=:0 CHUAN_SHOTS=/tmp/shots go test ./internal/app/ -run TestRenderPages -v
+```
+
+## 持续构建与发布
+
+推送到 `main` 触发 `.github/workflows/build.yml`，五个任务并行：
+
+| 任务 | 产物（Artifact） | 内容 |
+| --- | --- | --- |
+| `go vet + wasm build` | — | `go vet`、`go test`（xvfb 下跑渲染测试）、wasm 编译自查 |
+| `macOS` | `chuan-macos` | `文件快传.app` + `.dmg`（arm64、amd64） |
+| `Windows` | `chuan-windows` | `文件快传.exe` + NSIS 安装器（x64、arm64） |
+| `Browser (js/wasm)` | `chuan-web` | `index.html` + `app.wasm` 静态站，可直接扔到任意静态托管 |
+| `Android APK` | `chuan-android` | `chuan-mygo-0.1.0-debug.apk` |
+
+发布：在 Actions 里手动运行 `build`，把 `release` 输入填成 `v0.1.0`（或直接推 `v*` 标签），`Publish release` 会把上面四个产物平铺后挂到 GitHub Releases。
+
+> 本仓库的提交是通过 GitHub API 推送的（本机没有 git 凭据），文件的落盘权限是 `100644`，所以工作流里一律用 `bash scripts/build-web.sh` 调用脚本，没有依赖可执行位。
 
 ## 目录
 
