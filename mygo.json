@@ -9,11 +9,13 @@
   "main": "./cmd/chuan",
   "out": "build",
   "icon": "resources/icon.png",
-  "updates": { "github": "zjlovezxy/chuan-mygo" },
   "linux": {
     "webview": false,
     "comment": "文件快传：取件码配对，点对点直传",
-    "categories": ["Network", "FileTransfer"],
+    "categories": [
+      "Network",
+      "FileTransfer"
+    ],
     "maintainer": "zjlovezxy"
   }
 }
