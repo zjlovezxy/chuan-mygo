@@ -427,6 +427,11 @@ func (a *App) setRole(idx int) {
 func (a *App) startSession(role protocol.Role, code, server string) error {
 	a.mu.Lock()
 	a.closeLocked()
+	if role == protocol.RoleReceiver {
+		a.roleIdx = 1
+	} else {
+		a.roleIdx = 0
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancel = cancel
 
@@ -669,6 +674,20 @@ func (a *App) setDownloadDir(dir string) {
 }
 
 // stateText is the user-facing name of a session state.
+// roleName reports the role of the running session, or the one picked on the
+// home page before a session starts.
+func (a *App) roleName() string {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	if a.sess != nil {
+		if a.sess.Role() == protocol.RoleReceiver {
+			return "接收方"
+		}
+		return "发送方"
+	}
+	return roleName(a.roleIdx)
+}
+
 func stateText(state session.State) string {
 	switch state {
 	case session.StateSignaling:

@@ -98,6 +98,11 @@ func New(cfg Config) *Session {
 	return &Session{cfg: cfg, state: StateSignaling, done: make(chan struct{})}
 }
 
+// Role is this side's role in the room.
+func (s *Session) Role() protocol.Role {
+	return s.cfg.Role
+}
+
 // State is the current state.
 func (s *Session) State() State {
 	s.mu.Lock()

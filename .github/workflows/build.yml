@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "发布到 Releases（填 v0.1.0 这样的标签名，留空只构建）"
+        required: false
+        default: ""
 
 env:
   GO_VERSION: "1.27.4"
@@ -123,7 +128,7 @@ jobs:
 
   release:
     name: Publish release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || inputs.release != ''
     needs: [macos, windows, web, android]
     runs-on: ubuntu-latest
     permissions:
@@ -141,5 +146,6 @@ jobs:
           ls -lh dist
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release || github.ref_name }}
           files: dist/*
           generate_release_notes: true

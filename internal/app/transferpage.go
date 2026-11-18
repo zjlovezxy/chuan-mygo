@@ -29,7 +29,7 @@ func (a *App) transferPage(c *ui.Context) {
 	}
 	logs := append([]string(nil), a.logs...)
 	a.mu.RUnlock()
-	role := a.roleIdx
+	role := a.roleName()
 
 	if !hasSession && roomCode == "" {
 		ui.Column(c).Fill().Center().Gap(t.Space(3)).Children(func() {
@@ -76,7 +76,7 @@ func (a *App) transferPage(c *ui.Context) {
 			box.Children(func() {
 				ui.Row(c).FillWidth().Gap(t.Space(4)).Children(func() {
 					a.fact(c, "取件码", spaced(roomCode))
-					a.fact(c, "身份", roleName(role))
+					a.fact(c, "身份", role)
 					a.fact(c, "服务器", hostOf(server))
 				})
 				ui.Divider(c)
@@ -94,7 +94,7 @@ func (a *App) transferPage(c *ui.Context) {
 			})
 
 			// Sender's files.
-			if role == 0 {
+			if role == "发送方" {
 				sendBox := a.cardBox(c)
 				sendBox.Children(func() {
 					a.sectionLabel(c, "要发送的文件")
