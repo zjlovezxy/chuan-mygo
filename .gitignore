@@ -1,0 +1,28 @@
+# Build output
+build/
+dist/
+web/*.wasm
+web/wasm_exec.js
+
+# Generated artwork (tools/genicon writes these)
+resources/icon.png
+android/app/src/main/res/mipmap-*/ic_launcher.png
+
+# Android
+android/.gradle/
+android/local.properties
+android/gradlew
+android/gradlew.bat
+android/gradle/
+android/app/build/
+android/app/src/main/assets/web/
+*.apk
+*.aab
+*.iml
+.idea/
+
+# macOS
+.DS_Store
+
+# Go
+*.test
