@@ -19,7 +19,7 @@ func available() bool { return bridge().Type() == js.TypeObject }
 // picked.
 func PickSources(ctx context.Context) ([]Source, error) {
 	if !available() {
-		return nil, errors.New("当前页面缺少文件选择组件")
+		return nil, errors.New("当前页面缺少文件选择组件（请用 web/index.html + ./scripts/build-web.sh 启动，而不是 mygo dev -web）")
 	}
 	res, err := await(bridge().Call("pickFiles"))
 	if err != nil {
