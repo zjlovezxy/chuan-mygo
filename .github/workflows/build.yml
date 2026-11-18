@@ -80,7 +80,7 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
       - name: Build browser bundle
-        run: ./scripts/build-web.sh build/web
+        run: bash scripts/build-web.sh build/web
       - uses: actions/upload-artifact@v4
         with:
           name: chuan-web
@@ -106,7 +106,7 @@ jobs:
       - name: Draw the app icon
         run: go run ./tools/genicon
       - name: Build browser bundle for the WebView shell
-        run: ./scripts/build-web.sh android/app/src/main/assets/web
+        run: bash scripts/build-web.sh android/app/src/main/assets/web
       - name: Build debug APK
         working-directory: android
         run: gradle --no-daemon assembleDebug
