@@ -3,7 +3,6 @@ name: build
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -126,10 +125,30 @@ jobs:
           path: build/android/*.apk
           if-no-files-found: error
 
+  plan:
+    name: Resolve release tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: tag
+        run: |
+          tag=""
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            tag="${GITHUB_REF_NAME}"
+          elif [ -n "${{ inputs.release }}" ]; then
+            tag="${{ inputs.release }}"
+          elif [ -f release-tag.txt ]; then
+            tag="$(tr -d '[:space:]' < release-tag.txt)"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "release tag: ${tag:-none}"
+
   release:
     name: Publish release
-    if: startsWith(github.ref, 'refs/tags/v') || inputs.release != ''
-    needs: [macos, windows, web, android]
+    if: needs.plan.outputs.tag != ''
+    needs: [plan, macos, windows, web, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -139,13 +158,20 @@ jobs:
           path: artifacts
       - name: Flatten artifacts
         run: |
+          set -euo pipefail
           mkdir -p dist
-          find artifacts -type f -print0 | while IFS= read -r -d '' f; do
-            cp "$f" "dist/$(basename "$f")"
-          done
+          # macOS: the .dmg already contains the .app bundle
+          find artifacts -type f -name '*.dmg' -exec cp {} dist/ \;
+          find artifacts -type f -name '*.exe' -exec cp {} dist/ \;
+          find artifacts -type f -name '*.apk' -exec cp {} dist/ \;
+          if [ -d artifacts/chuan-web ]; then
+            tar -C artifacts/chuan-web -czf dist/chuan-mygo-web.tar.gz .
+          fi
           ls -lh dist
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.release || github.ref_name }}
+          tag_name: ${{ needs.plan.outputs.tag }}
+          name: 文件快传 ${{ needs.plan.outputs.tag }}
           files: dist/*
           generate_release_notes: true
+          draft: false
