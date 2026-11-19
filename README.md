@@ -122,3 +122,11 @@ docs/PROTOCOL.md      协议说明
 ## 许可
 
 MIT，见 [LICENSE](LICENSE)。上游 [file-transfer-go](https://github.com/MatrixSeven/file-transfer-go) 亦为 MIT。
+
+## 发版
+
+`release-tag.txt` 存在时，推送到 `main` 的构建会在全部产物出齐后自动发布 Release（标签即文件内容，例如 `v0.1.0`）。
+平时把这个文件删掉，只在准备发版时加回去；也可以在 Actions 里手动运行 `build` 并把 `release` 输入填成 `v0.1.0`。
+
+> macOS 包是**ad hoc 签名、未公证**（仓库里没有 Apple 开发者证书），首次打开若被 Gatekeeper 拦下：
+> 右键 →「打开」，或执行 `xattr -dr com.apple.quarantine /Applications/文件快传.app`。

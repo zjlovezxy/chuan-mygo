@@ -162,7 +162,8 @@ jobs:
           mkdir -p dist
           # macOS: the .dmg already contains the .app bundle
           find artifacts -type f -name '*.dmg' -exec cp {} dist/ \;
-          find artifacts -type f -name '*.exe' -exec cp {} dist/ \;
+          # windows: keep only the NSIS installers, drop the bare binary
+          find artifacts -type f -name '*setup*.exe' -exec cp {} dist/ \;
           find artifacts -type f -name '*.apk' -exec cp {} dist/ \;
           if [ -d artifacts/chuan-web ]; then
             tar -C artifacts/chuan-web -czf dist/chuan-mygo-web.tar.gz .
