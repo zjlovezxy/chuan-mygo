@@ -64,6 +64,17 @@ func TestEndToEndTransfer(t *testing.T) {
 	// session's event closures read it through an atomic pointer.
 	var receiverMgr atomic.Pointer[transfer.Manager]
 
+	// pion keeps gathering after Close; a late callback must not log through
+	// testing.T once the test is done, or the runtime panics.
+	var stopped atomic.Bool
+	t.Cleanup(func() { stopped.Store(true) })
+	logf := func(format string, args ...any) {
+		if stopped.Load() {
+			return
+		}
+		t.Logf(format, args...)
+	}
+
 	stateEvents := func(label string) Events {
 		return Events{
 			State: func(state State, detail string) {
@@ -75,11 +86,11 @@ func TestEndToEndTransfer(t *testing.T) {
 					return
 				}
 				if state == StateFailed {
-					t.Logf("[%s] failed: %s", label, detail)
+					logf("[%s] failed: %s", label, detail)
 				}
 			},
-			Log:   func(s string) { t.Logf("[%s] %s", label, s) },
-			Error: func(err error) { t.Logf("[%s] error: %v", label, err) },
+			Log:   func(s string) { logf("[%s] %s", label, s) },
+			Error: func(err error) { logf("[%s] error: %v", label, err) },
 		}
 	}
 

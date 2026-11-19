@@ -386,6 +386,11 @@ func (s *Session) sendSignal(ws *netlink.WS, typ string, payload any) {
 		return
 	}
 	if err := ws.SendJSON(sig); err != nil {
+		// Late ICE candidates routinely race with a deliberate close; that is
+		// not worth surfacing as an error.
+		if s.closing() {
+			return
+		}
 		s.cfg.Events.log("发送信令失败：%v", err)
 	}
 }
