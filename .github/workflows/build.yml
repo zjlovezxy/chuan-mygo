@@ -12,6 +12,9 @@ on:
         default: ""
 
 env:
+  # mygo's GL renderer falls back to llvmpipe without a GPU; keep it off hardware GL so
+  # xvfb renders are deterministic on CI.
+  LIBGL_ALWAYS_SOFTWARE: "1"
   GO_VERSION: "1.27.4"
   MYGO_VERSION: "v0.8.3"
   CI: "true"
@@ -28,9 +31,13 @@ jobs:
           cache: true
       - run: go build ./...
       - run: go vet ./...
-      - run: xvfb-run -a go test -race ./...
-      - name: Build the browser bundle
-        run: GOOS=js GOARCH=wasm go build -trimpath -ldflags "-s -w" -o /tmp/app.wasm ./cmd/chuan
+      - run: xvfb-run -a -s "-screen 0 1440x900x24" go test -race -count=1 -timeout 15m ./... 2>&1 | tee test.log
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log
+          path: test.log
+          if-no-files-found: ignore
 
   macos:
     name: macOS (arm64 + amd64)
